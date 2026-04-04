@@ -1,0 +1,42 @@
+{
+  "name": "finance-dashboard-api",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "node prisma/seed.js",
+    "db:studio": "prisma studio",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.6.0",
+    "@prisma/client": "latest",
+    "bcryptjs": "latest",
+    "cors": "latest",
+    "dotenv": "latest",
+    "express": "latest",
+    "express-rate-limit": "^8.3.2",
+    "helmet": "latest",
+    "jsonwebtoken": "latest",
+    "morgan": "latest",
+    "pg": "^8.20.0",
+    "swagger-jsdoc": "latest",
+    "swagger-ui-express": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "jest": "latest",
+    "nodemon": "latest",
+    "prisma": "latest",
+    "supertest": "latest"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {}
+  }
+}
