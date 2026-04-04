@@ -88,7 +88,7 @@ For the full detailed overview of available endpoints, request structures, and r
 - **Live Demo Link:** [https://finance-manager-vrhv.onrender.com/api/docs/](https://finance-manager-vrhv.onrender.com/api/docs/)
 - **Local:** Once your server is running, navigate to `http://localhost:3000/api/docs` in your browser to interact directly with the API endpoints!
 
-## 🏗️ Architectural Highlights
+## Architectural Highlights
 - **Separation of Concerns:** Deep modularity passing data from standard `Routes` ➔ `Controllers` (Handling HTTP logic) ➔ `Services` (Core Business/DB Logic).
 - **Centralized Error Handling:** Global error catching wrapper utilizing custom `ApiError` instances ensures uniform JSON responses even during unexpected Prisma faults.
 - **Audit Logging:** An `AuditLog` table silently tracks core actor mutations across records for complete accountability.
