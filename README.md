@@ -1,101 +1,70 @@
-# Finance Dashboard API
+# 📈 Finance Dashboard API (Backend Project)
 
-REST API for financial records, role-based access, and dashboard aggregates. Built for the Finance Data Processing and Access Control backend exercise: Express, PostgreSQL, Prisma, JWT auth, and Zod validation.
+Hi there! 👋 Welcome to my Finance Dashboard API backend. This project was built as part of an assessment to demonstrate my ability to design backend architecture, structure data correctly, and implement strong role-based access control.
 
-## Quick start
+As an intern working on this piece, I had a blast putting all the pieces together! I focused heavily on ensuring the application is clean, maintainable, and built on reliable modern practices.
 
-**1. Install and configure**
+## 🛠️ Tech Stack & Decisions
+I wanted to build something robust but not overly complicated, so I picked the following tools:
+- **Node.js & Express:** For handling the server and routing.
+- **PostgreSQL & Prisma 7:** Used as the database and ORM. I really enjoyed how Prisma explicitly manages the schema and handles migrations wonderfully!
+- **Zod:** To handle all request validation safely before data even hits the core business logic.
+- **JWT (JSON Web Tokens):** For authenticating users cleanly alongside rotating refresh tokens.
+- **Jest:** For unit and integration tests to make sure everything works properly.
 
+## 🚀 How to Run Locally
+
+If you want to spin this up on your own machine to test my logic, here are the exact steps I followed:
+
+**1. Clone the repo & install dependencies**
 ```bash
-git clone https://github.com/harshgupta1064/finance_manager
+git clone https://github.com/harshgupta1064/finance_manager.git
 cd finance_manager
 npm install
-cp .env.example .env
 ```
 
-Set `DATABASE_URL` and `JWT_SECRET` in `.env` before running migrations or the server.
+**2. Environment Variables**
+Copy the example file to set up your `.env`:
+```bash
+# On Linux/Mac: cp .env.example .env
+# On Windows: copy .env.example .env
+```
+*Note: Make sure to open the `.env` file and fill in your `DATABASE_URL` (points to your Postgres database) and secure `JWT_SECRET`.*
 
-**2. Database**
-
-PostgreSQL must be running. Apply the schema and seed demo data:
-
+**3. Database Setup**
+I created a couple of helpful scripts to push the Prisma schema and populate the database with some initial users.
 ```bash
 npm run db:push
 npm run db:seed
 ```
 
-**3. Run**
-
+**4. Start the Application**
 ```bash
 npm run dev
 ```
+The server will boot up and be accessible at `http://localhost:3000`.
 
-- Base URL: `http://localhost:3000`
-- OpenAPI UI: `http://localhost:3000/api/docs`
+## 🧑‍💻 Test Accounts (Seed Data)
+If you ran the seed command above, you can log in immediately using these default accounts to test out exactly how the Role-Based Access Control (RBAC) works:
 
-**Rate limits:** With `NODE_ENV=test`, limits are disabled for automated tests. Otherwise: 100 requests per 15 minutes per IP (global), and 20 per 15 minutes on `POST /api/auth/register` and `POST /api/auth/login`. Adjust in `src/middleware/rateLimit.js` if needed; behind a reverse proxy, configure Express `trust proxy` so client IPs are correct.
+| Role | Email | Password | Permissions |
+|--------|----------------|----------------|----------------|
+| **Admin** | `admin@test.com` | `Admin@123` | Full access to records and managing users. |
+| **Analyst** | `analyst@test.com` | `Analyst@123` | Can create & read records, but no user management. |
+| **Viewer** | `viewer@test.com` | `Viewer@123` | Read-only access to records and dashboard. |
 
-## Assumptions
+## 📚 API Documentation
 
-- **Who sees what:** Viewers and analysts read the same set of non-deleted records and the same dashboard totals. Roles differ by what each may **do** (create, update, delete, manage users), not by hiding rows per user.
-- **Soft delete:** List and aggregate queries ignore records where `isDeleted` is true.
-- **Inactive accounts:** After an admin sets `isActive` to false, the next authenticated request fails with 403 even if the JWT has not expired, because the user row is loaded on each request.
+I've documented all the endpoints, request models, and expected responses in a separate file to keep this README uncluttered and easy to read. 
 
-## Behaviour worth noting
+👉 **[Please check the `API_DOCUMENTATION.md` file here](./API_DOCUMENTATION.md) for full details on how to interact with the API!**
 
-These are implemented in code and reflected in Swagger; details below are the short version.
+Alternatively, once you have the app running locally, you can explore the fully interactive **Swagger UI** generated straight from my route definitions by visiting:
+`http://localhost:3000/api/docs`
 
-| Topic | What to know |
-|--------|----------------|
-| Auth on every protected call | After the JWT is verified, the user is loaded from the database. Role changes apply on the next request; missing users get 401; inactive users get 403 (message indicates deactivation). |
-| Rate limiting | Global cap plus stricter limits on register and login. Implementation: `src/middleware/rateLimit.js`. Off when `NODE_ENV=test`. Over-limit responses use HTTP 429. |
-| Record search | `GET /api/records?search=...` matches `name`, `category`, or `notes` (case-insensitive), combined with `type`, `category`, and date filters as AND. |
-| Dashboard trends | `GET /api/dashboard/trends?period=month` (default, up to 48 months) or `period=week` (up to 104 weeks). Any other `period` value returns 422. |
+## 💡 Things I Focused On & Learned
+- **Separation of Concerns:** I kept my routes, controllers, middleware, and database services completely separated. This made understanding the flow of data much easier!
+- **Soft Deletes:** Instead of permanently dropping transaction records from the database, I rely on an `isDeleted` flag so we never accidentally lose historical data.
+- **Rate Limiting:** Added a basic rate limiter using `express-rate-limit` so the login/register endpoints wouldn't get overwhelmed by brute-force attacks.
 
-## Seed users (local only)
-
-| Email            | Password    | Role    | Notes                          |
-|------------------|-------------|---------|--------------------------------|
-| admin@test.com   | Admin@123   | ADMIN   | Full record and user management |
-| analyst@test.com | Analyst@123 | ANALYST | Create records; no user admin   |
-| viewer@test.com  | Viewer@123  | VIEWER  | Read-only                       |
-
-## API overview
-
-Protected routes expect: `Authorization: Bearer <accessToken>`.
-
-Detail for request and response shapes is in [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) and in Swagger at `/api/docs`.
-
-**Authentication**
-
-- `POST /api/auth/register` — sign up (default role VIEWER)
-- `POST /api/auth/login` — access and refresh tokens
-- `GET /api/auth/me` — current user (authenticated)
-- `POST /api/auth/refresh` — new tokens
-- `POST /api/auth/logout` — drop refresh token
-
-**Financial records**
-
-- `POST /api/records` — create (ADMIN, ANALYST)
-- `GET /api/records` — list with pagination, filters, optional `search` on name, category, notes (all roles)
-- `GET /api/records/:id` — one record (all roles)
-- `PUT /api/records/:id` — update (ADMIN)
-- `DELETE /api/records/:id` — soft delete (ADMIN)
-
-**Dashboard**
-
-- `GET /api/dashboard/summary` — income, expenses, net balance (all roles)
-- `GET /api/dashboard/by-category` — totals by category (all roles)
-- `GET /api/dashboard/trends` — `period=month` (default) or `period=week` (all roles)
-- `GET /api/dashboard/recent` — latest 10 records (all roles)
-
-**Users (ADMIN only)**
-
-- `GET /api/users` — paginated list
-- `GET /api/users/:id` — one user
-- `PATCH /api/users/:id/role` — set role
-- `PATCH /api/users/:id/status` — activate or deactivate
-
-## Stack and behavior (short)
-
-PostgreSQL and Prisma; amounts stored as `DECIMAL(12,2)`. Validation uses Zod (422 with field errors where applicable). Record mutations that need atomicity use Prisma transactions; record create/update/delete are also written to audit logs. Refresh tokens are stored hashed and rotated on refresh. Integration tests live under `tests/` and expect a running database (same `DATABASE_URL` as local dev).
+*Thank you so much for taking the time to review my code. I am really eager to learn and grow, so any feedback on my structural choices, design decisions, or code quality would be highly appreciated!* 🙌
