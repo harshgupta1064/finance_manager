@@ -85,7 +85,8 @@ For the full detailed overview of available endpoints, request structures, and r
 👉 **[Read the API_DOCUMENTATION.md](./API_DOCUMENTATION.md)**
 
 **Interactive Swagger UI:**
-Once your server is running, navigate to `http://localhost:3000/api/docs` in your browser to interact directly with the API endpoints!
+- **Live Demo Link:** [https://finance-manager-vrhv.onrender.com/api/docs/](https://finance-manager-vrhv.onrender.com/api/docs/)
+- **Local:** Once your server is running, navigate to `http://localhost:3000/api/docs` in your browser to interact directly with the API endpoints!
 
 ## 🏗️ Architectural Highlights
 - **Separation of Concerns:** Deep modularity passing data from standard `Routes` ➔ `Controllers` (Handling HTTP logic) ➔ `Services` (Core Business/DB Logic).

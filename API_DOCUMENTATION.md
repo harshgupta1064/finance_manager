@@ -1,65 +1,64 @@
-# Finance Dashboard API — Reference
+# Finance Dashboard API — Technical Documentation
 
-This document describes the HTTP API for users, roles, financial records, and dashboard metrics.
-
-- **Base URL:** `http://localhost:3000` (local)
-- **Interactive spec:** `http://localhost:3000/api/docs` (Swagger UI)
-
-## Contents
-
-1. [Authentication](#authentication-strategy)
-2. [Response shape](#response-format)
-3. [Auth routes](#authentication-endpoints)
-4. [User management](#user-management-endpoints)
-5. [Financial records](#financial-records-endpoints)
-6. [Dashboard](#dashboard-endpoints)
+This document serves as the comprehensive technical reference for the Finance Dashboard API. It outlines system assumptions, authentication mechanisms, enumerations, standard HTTP codes, and extensive payload structures for all endpoints.
 
 ---
 
-## Authentication strategy
+## 🔐 1. Authentication Strategy
 
-The API uses JWTs. Login and register responses include an `accessToken`; send it on protected routes:
+The API utilizes a dual-token **JSON Web Token (JWT)** architecture to balance stateless performance with secure invalidation capabilities.
 
-`Authorization: Bearer <accessToken>`
+- **Access Tokens:** Standard JWT passed in the `Authorization` header as a Bearer token (`Authorization: Bearer <accessToken>`). They have a short lifespan (e.g., 15 minutes).
+- **Refresh Tokens:** Opaque hashes stored securely within the database (`RefreshToken` table). Used against `/api/auth/refresh` to obtain new Access Tokens without forcing the user to log in again.
+- **Stateful Middle-Layer Validation:** Even after verifying the cryptographic signature of the Access Token, the `authenticate` middleware looks up the user's `id` in the database. 
+  - *Advantage:* If an Admin disables a user account (`isActive: false`) or changes their role, the security rules apply instantaneously on their next request, overriding the stateless nature of the JWT.
 
-Refresh tokens are stored hashed server-side and can be rotated via the refresh endpoint.
+---
+
+## 📌 2. Design Assumptions & Tradeoffs
+
+- **Soft Deleting:** Financial records are never hard-deleted (`DELETE` from DB). They are flagged with `isDeleted = true`. The API logic intentionally omits all soft-deleted records from Dashboard math and Lists to preserve referential integrity and audit logs.
+- **Role Scoping:** Viewers, Analysts, and Admins all see the same aggregated dashboard numbers. Roles govern **mutating access** (who has the authorization to create, change, or delete data) rather than isolating ledger visibility per user. 
+- **Pagination Defaults:** Any endpoint returning lists defaults to `page=1` and `limit=10`. Limits are forcefully capped at 100 to prevent database memory exhaustion.
+- **Rate Limiting:** IP-based request throttling is applied globally (100 reqs/15m) and strictly on authentication endpoints (20 reqs/15m) to prevent brute-force attacks.
+
+---
+
+## 📜 3. Global Enums
 
 ### Roles
-
-| Role    | Typical use |
+| Enum | Application Permission Level |
 |---------|-------------|
-| VIEWER  | Read records and dashboards only |
-| ANALYST | Read everything; create records |
-| ADMIN   | Full record CRUD (including soft delete), user listing, role and status updates |
+| **`VIEWER`** | Read-only access to all financial records and dashboard analytics. |
+| **`ANALYST`**| Read access to records/analytics, plus capability to **Create (POST)** records. |
+| **`ADMIN`**  | Full CRUD access to records (including global Updates and Soft Deletes) operations. Exclusive access to update User Access/Roles. |
 
-### Design assumptions
-
-- Viewers and analysts see the same non-deleted data and aggregates. Access control is about **actions**, not separate per-user ledgers unless you extend the model.
-- Soft-deleted records are omitted from lists and dashboard math.
-- If `isActive` is false, authenticated requests return **403** on the next call, regardless of JWT expiry, because the user record is read after the token is verified. If the user id in the token no longer exists, the API returns **401**.
-- Rate limits: 100 requests / 15 minutes / IP on most routes; 20 / 15 minutes on `POST /api/auth/register` and `POST /api/auth/login`. Disabled when `NODE_ENV=test`. Excess traffic returns **429** (see auth section below).
-- **Record list search:** `GET /api/records` accepts optional `search` (see financial records section).
-- **Trends granularity:** `GET /api/dashboard/trends` accepts `period=month` or `period=week`; invalid values yield **422**.
+### Record Type
+| Enum | Description |
+|---------|-------------|
+| **`INCOME`** | Positive cash flow transactions (e.g., Salary, Freelancing). |
+| **`EXPENSE`**| Negative cash flow transactions (e.g., Rent, Utilities, Food). |
 
 ---
 
-## Response format
+## 🚥 4. Standard Response Formats & Error Codes
 
-Success, single resource:
+All APIs respond with a consistent JSON envelope to make frontend integration predictable.
 
+### Success Structures
+**Single Resource (200 OK / 201 Created)**
 ```json
 {
   "success": true,
-  "data": { }
+  "data": { ...resourceObject }
 }
 ```
 
-Success, paginated list:
-
+**Paginated Lists (200 OK)**
 ```json
 {
   "success": true,
-  "data": [ ],
+  "data": [ { ...record1 }, { ...record2 } ],
   "meta": {
     "page": 1,
     "limit": 10,
@@ -69,148 +68,151 @@ Success, paginated list:
 }
 ```
 
-Error:
+### Global Error Codes
+When `success: false`, an error message is returned. A `422` error includes an `errors` object mapping fields to their validation failures (handled safely by Zod).
 
-```json
-{
-  "success": false,
-  "message": "Short explanation",
-  "errors": { "fieldName": ["validation detail"] }
-}
-```
-
-`errors` is present mainly for validation (422) responses.
-
----
-
-## Authentication endpoints
-
-Repeated register or login attempts from the same IP can receive **429 Too Many Requests** when rate limiting applies (see assumptions above).
-
-### POST /api/auth/register
-
-Creates a user with default role `VIEWER`.
-
-- **Auth:** No
-- **Body:** `name`, `email`, `password` (see Zod rules in code for password policy)
-- **201** — Created  
-- **409** — Email already in use  
-- **422** — Validation failed  
-
-### POST /api/auth/login
-
-- **Auth:** No  
-- **Body:** `email`, `password`  
-- **200** — `{ user, accessToken, refreshToken }`  
-- **401** — Wrong credentials  
-- **403** — Account deactivated  
-
-### GET /api/auth/me
-
-- **Auth:** Yes  
-- **200** — Current user (`id`, `email`, `role` from database)  
-
-### POST /api/auth/refresh
-
-- **Auth:** No  
-- **Body:** `refreshToken`  
-- **200** — New access and refresh tokens  
-
-### POST /api/auth/logout
-
-- **Auth:** No  
-- **Body:** `refreshToken`  
-- **204** — Refresh token removed  
+| Status Code | Description | Example Payload |
+|-------------|-------------|-----------------|
+| **`400`**   | Bad Request | `{"success":false, "message":"Invalid input parameters"}` |
+| **`401`**   | Unauthorized| `{"success":false, "message":"Not authenticated"}` (Missing/Expired JWT) |
+| **`403`**   | Forbidden   | `{"success":false, "message":"Account deactivated or insufficient permissions"}` |
+| **`404`**   | Not Found   | `{"success":false, "message":"Resource does not exist"}` |
+| **`409`**   | Conflict    | `{"success":false, "message":"Email already in use"}` |
+| **`422`**   | Unprocessable| `{"success":false, "message":"Validation failed", "errors": {"email": ["Invalid email format"]}}` |
+| **`429`**   | Rate Limit  | `{"success":false, "message":"Too many requests, try again later"}` |
+| **`500`**   | Server Error| `{"success":false, "message":"Internal server error"}` |
 
 ---
 
-## User management endpoints
+## 🔌 5. API Reference
 
-All require **ADMIN**.
+### 👤 Authentication Endpoints
 
-### GET /api/users
+#### `POST /api/auth/register`
+Creates a fresh user account. Defaults to the `VIEWER` role.
+- **Request Body:**
+  ```json
+  { "name": "John Doe", "email": "john@test.com", "password": "SecurePassword123!" }
+  ```
+- **Response `201 Created`:**
+  ```json
+  { "success": true, "message": "User registered successfully", "data": { "id": "...", "email": "john@test.com", "role": "VIEWER" } }
+  ```
 
-Query: `page`, `limit`. Returns a paginated user list.
+#### `POST /api/auth/login`
+- **Request Body:**
+  ```json
+  { "email": "john@test.com", "password": "SecurePassword123!" }
+  ```
+- **Response `200 OK`:** Returns access and refresh keys. 
+  ```json
+  { "success": true, "data": { "user": { "id": "...", "role": "VIEWER" }, "accessToken": "eyJhbG...", "refreshToken": "9d8f8a..." } }
+  ```
 
-### GET /api/users/:id
+#### `GET /api/auth/me`
+Retrieves current session context mapping. Requires Bearer Token.
+- **Response `200 OK`:**
+  ```json
+  { "success": true, "data": { "id": "...", "name": "John", "email": "john@test.com", "role": "VIEWER" } }
+  ```
 
-Returns one user.
-
-### PATCH /api/users/:id/role
-
-Body: `{ "role": "VIEWER" | "ANALYST" | "ADMIN" }`
-
-### PATCH /api/users/:id/status
-
-Body: `{ "isActive": true | false }`  
-Deactivation blocks further API use without deleting the user row.
-
----
-
-## Financial records endpoints
-
-### POST /api/records
-
-- **Auth:** ADMIN, ANALYST  
-- **Body example:**
-
-```json
-{
-  "name": "Monthly pay",
-  "amount": 1250.5,
-  "type": "INCOME",
-  "category": "Salary",
-  "date": "2024-03-20",
-  "notes": "March"
-}
-```
-
-`type` is `INCOME` or `EXPENSE`. `notes` is optional.
-
-- **201** — Created  
-
-### GET /api/records
-
-- **Auth:** All roles  
-- **Query:**  
-  - `type` — `INCOME` or `EXPENSE`  
-  - `category` — substring, case-insensitive  
-  - `search` — optional; matches `name`, `category`, or `notes` (AND with other filters)  
-  - `startDate`, `endDate` — filter on record date  
-  - `page`, `limit` — pagination (defaults 1 and 10, max limit 100)  
-
-### PUT /api/records/:id
-
-- **Auth:** ADMIN  
-- **Body:** Any subset of the create fields  
-
-### DELETE /api/records/:id
-
-- **Auth:** ADMIN  
-- **204** — Soft-deleted (`isDeleted` set true)  
+#### `POST /api/auth/refresh`
+Exchanges a valid refresh token for fresh Access/Refresh keys.
+- **Request Body:**
+  ```json
+  { "refreshToken": "your_existing_refresh_token" }
+  ```
+- **Response `200 OK`:** `{ "success": true, "data": { "accessToken": "new...", "refreshToken": "new..." } }`
 
 ---
 
-## Dashboard endpoints
+### 🛡️ User Management Endpoints (Requires `ADMIN`)
 
-All require authentication (any role).
+#### `PATCH /api/users/:id/role`
+Updates a user's RBAC scope natively.
+- **Request Body:**
+  ```json
+  { "role": "ANALYST" } // Must be one of the Role enums
+  ```
+- **Response `200 OK`:** `{ "success": true, "data": { "id": "...", "role": "ANALYST" } }`
 
-### GET /api/dashboard/summary
+#### `PATCH /api/users/:id/status`
+Soft-locks an account. Users set to `isActive: false` immediately receive 403s on future calls.
+- **Request Body:**
+  ```json
+  { "isActive": false }
+  ```
+- **Response `200 OK`:** `{ "success": true, "data": { "isActive": false } }`
 
-Optional query: `startDate`, `endDate`.  
-Returns `totalIncome`, `totalExpenses`, `netBalance` (numbers derived from decimal sums).
+---
 
-### GET /api/dashboard/by-category
+### 💵 Financial Records Endpoints
 
-Optional: `startDate`, `endDate`.  
-Returns grouped sums (and counts) by `category` and `type`.
+#### `POST /api/records` (Requires `ADMIN` or `ANALYST`)
+Creates a new financial transaction attached to the actor creating it.
+- **Request Body:**
+  ```json
+  {
+    "name": "Design Freelance",
+    "amount": 25000.50,
+    "type": "INCOME",
+    "category": "Freelancing",
+    "date": "2025-05-15",
+    "notes": "Project XYZ payment"
+  }
+  ```
+- **Response `201 Created`:** `{ "success": true, "data": { "id": "...", "name": "Design Freelance", ... } }`
 
-### GET /api/dashboard/trends
+#### `GET /api/records` (Requires `Auth`)
+Lists records with complex, case-insensitive logic. Excludes soft-deleted records.
+- **Query Parameters:**
+  - `page` (int), `limit` (int)
+  - `type` (Enum: `INCOME` | `EXPENSE`)
+  - `category` (string, fuzzy logic)
+  - `search` (string, fuzzy logic looking against `name`, `category`, OR `notes`)
+  - `startDate`, `endDate` (ISO Strings bounding `date`)
+- **Response `200 OK`:** Returns Paginated List format (see Section 4).
 
-- **Query:** `period` — `month` (default; up to 48 monthly buckets) or `week` (up to 104 weekly buckets, week start from PostgreSQL `DATE_TRUNC`).
-- **200** — Array of rows: bucket start date (`month` or `week` column depending on `period`), `type` (`INCOME` / `EXPENSE`), `total`, `count`.
-- **422** — `period` is present but not `month` or `week` (validated with Zod).
+#### `PUT /api/records/:id` (Requires `ADMIN`)
+Updates specific traits of a record.
+- **Request Body:** Accepts partial updates of the `POST` payload schema.
+- **Response `200 OK`:** Returns updated record data.
 
-### GET /api/dashboard/recent
+#### `DELETE /api/records/:id` (Requires `ADMIN`)
+Soft-deletes the record securely.
+- **Response `204 No Content`** (Empty body).
 
-Returns up to 10 latest non-deleted records (by creation time), with basic user info where applicable.
+---
+
+### 📊 Dashboard Aggregation Endpoints (Requires `Auth`)
+
+#### `GET /api/dashboard/summary`
+Calculates total gross values exclusively analyzing `isDeleted: false` records.
+- **Query Params:** `startDate`, `endDate`
+- **Response `200 OK`:**
+  ```json
+  { "success": true, "data": { "totalIncome": 25000, "totalExpenses": 1800, "netBalance": 23200 } }
+  ```
+
+#### `GET /api/dashboard/by-category`
+Provides a breakdown of expenditures/incomes segmented precisely by text category.
+- **Response `200 OK`:**
+  ```json
+  { "success": true, "data": [ 
+    { "category": "Rent", "type": "EXPENSE", "_sum": { "amount": "18000" }, "_count": { "id": 1 } }
+  ] }
+  ```
+
+#### `GET /api/dashboard/trends`
+Runs complex SQL truncations to output rolling analytics.
+- **Query Params:** `period` => `month` (Default, max 48 buckets) or `week` (max 104 buckets).
+- **Response `200 OK`:**
+  ```json
+  { "success": true, "data": [
+    { "month": "2024-03-01", "type": "INCOME", "total": 85000, "count": 2 }
+  ] }
+  ```
+
+#### `GET /api/dashboard/recent`
+Returns exactly the last 10 transactions added to the platform for instant display.
+- **Response `200 OK`:** Array of the 10 most recent Record objects.
