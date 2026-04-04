@@ -1,10 +1,10 @@
-# 📈 Finance Dashboard API
+# Finance Dashboard API
 
 A robust, full-featured backend REST API built to manage financial records, process analytics, and enforce strict robust role-based access control (RBAC). 
 
 This project was engineered with a heavy focus on architectural clarity, database integrity, and production-ready practices like input validation, rate limiting, and JWT authentication.
 
-## ✨ Features Implemented
+## Features Implemented
 
 **Core Requirements:**
 - **User & Role Management:** Secure system supporting `ADMIN`, `ANALYST`, and `VIEWER` roles. Admins can manage users and access statuses seamlessly.
@@ -21,7 +21,7 @@ This project was engineered with a heavy focus on architectural clarity, databas
 - **Testing:** Automated integration suites built with `Jest`.
 - **Documentation:** Real-time, interactive API exploration via Swagger UI.
 
-## 🛠️ Tech Stack
+## Tech Stack
 - **Runtime Framework:** Node.js, Express.js
 - **Database & ORM:** PostgreSQL, Prisma 7 (`@prisma/adapter-pg`)
 - **Validation:** Zod (Type-safe schema validation)
@@ -29,7 +29,7 @@ This project was engineered with a heavy focus on architectural clarity, databas
 - **Testing:** Jest, Supertest
 - **API Specs:** Swagger JSDoc, Swagger UI Express
 
-## 🚦 Local Setup Guide
+## Local Setup Guide
 
 Follow these steps to get the application running locally on your machine.
 
@@ -68,7 +68,7 @@ npm run dev
 ```
 The server will start on port `3000`. You can now access the API at `http://localhost:3000`.
 
-## 🧑‍💻 Seed Users (RBAC Testing)
+## Seed Users (RBAC Testing)
 
 To demonstrate the access control logic, the seeding command provisions the following test accounts:
 
@@ -78,11 +78,11 @@ To demonstrate the access control logic, the seeding command provisions the foll
 | **Analyst** | `analyst@test.com` | `Analyst@123` | Standard access. Can read all records/dashboard stats and create new records. |
 | **Viewer** | `viewer@test.com` | `Viewer@123` | Read-only. Can only view records and dashboard aggregates. |
 
-## 📚 API Documentation
+## API Documentation
 
 For the full detailed overview of available endpoints, request structures, and response payloads:
 
-👉 **[Read the API_DOCUMENTATION.md](./API_DOCUMENTATION.md)**
+ **[Read the API_DOCUMENTATION.md](./API_DOCUMENTATION.md)**
 
 **Interactive Swagger UI:**
 - **Live Demo Link:** [https://finance-manager-vrhv.onrender.com/api/docs/](https://finance-manager-vrhv.onrender.com/api/docs/)
