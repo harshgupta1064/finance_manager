@@ -4,7 +4,7 @@ This document serves as the comprehensive technical reference for the Finance Da
 
 ---
 
-## 🔐 1. Authentication Strategy
+## 1. Authentication Strategy
 
 The API utilizes a dual-token **JSON Web Token (JWT)** architecture to balance stateless performance with secure invalidation capabilities.
 
@@ -15,7 +15,7 @@ The API utilizes a dual-token **JSON Web Token (JWT)** architecture to balance s
 
 ---
 
-## 📌 2. Design Assumptions & Tradeoffs
+## 2. Design Assumptions & Tradeoffs
 
 - **Soft Deleting:** Financial records are never hard-deleted (`DELETE` from DB). They are flagged with `isDeleted = true`. The API logic intentionally omits all soft-deleted records from Dashboard math and Lists to preserve referential integrity and audit logs.
 - **Role Scoping:** Viewers, Analysts, and Admins all see the same aggregated dashboard numbers. Roles govern **mutating access** (who has the authorization to create, change, or delete data) rather than isolating ledger visibility per user. 
@@ -24,7 +24,7 @@ The API utilizes a dual-token **JSON Web Token (JWT)** architecture to balance s
 
 ---
 
-## 📜 3. Global Enums
+## 3. Global Enums
 
 ### Roles
 | Enum | Application Permission Level |
@@ -41,7 +41,7 @@ The API utilizes a dual-token **JSON Web Token (JWT)** architecture to balance s
 
 ---
 
-## 🚥 4. Standard Response Formats & Error Codes
+## 4. Standard Response Formats & Error Codes
 
 All APIs respond with a consistent JSON envelope to make frontend integration predictable.
 
@@ -84,9 +84,9 @@ When `success: false`, an error message is returned. A `422` error includes an `
 
 ---
 
-## 🔌 5. API Reference
+## 5. API Reference
 
-### 👤 Authentication Endpoints
+### Authentication Endpoints
 
 #### `POST /api/auth/register`
 Creates a fresh user account. Defaults to the `VIEWER` role.
@@ -126,7 +126,7 @@ Exchanges a valid refresh token for fresh Access/Refresh keys.
 
 ---
 
-### 🛡️ User Management Endpoints (Requires `ADMIN`)
+### User Management Endpoints (Requires `ADMIN`)
 
 #### `PATCH /api/users/:id/role`
 Updates a user's RBAC scope natively.
@@ -146,7 +146,7 @@ Soft-locks an account. Users set to `isActive: false` immediately receive 403s o
 
 ---
 
-### 💵 Financial Records Endpoints
+### Financial Records Endpoints
 
 #### `POST /api/records` (Requires `ADMIN` or `ANALYST`)
 Creates a new financial transaction attached to the actor creating it.
@@ -184,7 +184,7 @@ Soft-deletes the record securely.
 
 ---
 
-### 📊 Dashboard Aggregation Endpoints (Requires `Auth`)
+### Dashboard Aggregation Endpoints (Requires `Auth`)
 
 #### `GET /api/dashboard/summary`
 Calculates total gross values exclusively analyzing `isDeleted: false` records.
