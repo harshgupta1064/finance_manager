@@ -1,70 +1,93 @@
-# 📈 Finance Dashboard API (Backend Project)
+# 📈 Finance Dashboard API
 
-Hi there! 👋 Welcome to my Finance Dashboard API backend. This project was built as part of an assessment to demonstrate my ability to design backend architecture, structure data correctly, and implement strong role-based access control.
+A robust, full-featured backend REST API built to manage financial records, process analytics, and enforce strict robust role-based access control (RBAC). 
 
-As an intern working on this piece, I had a blast putting all the pieces together! I focused heavily on ensuring the application is clean, maintainable, and built on reliable modern practices.
+This project was engineered with a heavy focus on architectural clarity, database integrity, and production-ready practices like input validation, rate limiting, and JWT authentication.
 
-## 🛠️ Tech Stack & Decisions
-I wanted to build something robust but not overly complicated, so I picked the following tools:
-- **Node.js & Express:** For handling the server and routing.
-- **PostgreSQL & Prisma 7:** Used as the database and ORM. I really enjoyed how Prisma explicitly manages the schema and handles migrations wonderfully!
-- **Zod:** To handle all request validation safely before data even hits the core business logic.
-- **JWT (JSON Web Tokens):** For authenticating users cleanly alongside rotating refresh tokens.
-- **Jest:** For unit and integration tests to make sure everything works properly.
+## ✨ Features Implemented
 
-## 🚀 How to Run Locally
+**Core Requirements:**
+- **User & Role Management:** Secure system supporting `ADMIN`, `ANALYST`, and `VIEWER` roles. Admins can manage users and access statuses seamlessly.
+- **Financial Records:** Complete CRUD operations for tracking financial transactions (Income/Expenses) with detailed categorizations, dates, and filtering logic.
+- **Dashboard Analytics:** High-performance data aggregation endpoints providing net balance, category distributions, recent activity, and monthly/weekly structural trends.
+- **Data Persistence:** Reliable relational data modeling using PostgreSQL and Prisma ORM.
 
-If you want to spin this up on your own machine to test my logic, here are the exact steps I followed:
+**Optional Enhancements Included:**
+- **Authentication:** Dual-token JWT architecture (Access + Refresh tokens) for robust session management.
+- **Advanced Access Control:** Middleware securely blocks unauthorized role actions. Viewers only read, Analysts read & create records, and Admins have full system control.
+- **Soft Deletes:** Records are flagged as deleted (`isDeleted`) preserving historical audit integrity without hard-dropping rows.
+- **Search & Pagination:** Record endpoints support paginated limits and fuzzy search across names, categories, and notes.
+- **Rate Limiting:** Protects exposed endpoints (login/register) against brute-force attacks using `express-rate-limit`.
+- **Testing:** Automated integration suites built with `Jest`.
+- **Documentation:** Real-time, interactive API exploration via Swagger UI.
 
-**1. Clone the repo & install dependencies**
+## 🛠️ Tech Stack
+- **Runtime Framework:** Node.js, Express.js
+- **Database & ORM:** PostgreSQL, Prisma 7 (`@prisma/adapter-pg`)
+- **Validation:** Zod (Type-safe schema validation)
+- **Security:** bcryptjs (hashing), jsonwebtoken (auth), Helmet (HTTP headers)
+- **Testing:** Jest, Supertest
+- **API Specs:** Swagger JSDoc, Swagger UI Express
+
+## 🚦 Local Setup Guide
+
+Follow these steps to get the application running locally on your machine.
+
+**1. Prerequisites**
+- Node.js (v18+)
+- PostgreSQL installed and running locally
+
+**2. Clone and Install**
 ```bash
 git clone https://github.com/harshgupta1064/finance_manager.git
 cd finance_manager
 npm install
 ```
 
-**2. Environment Variables**
-Copy the example file to set up your `.env`:
+**3. Environment Variables**
+Create a `.env` file from the provided example:
 ```bash
-# On Linux/Mac: cp .env.example .env
-# On Windows: copy .env.example .env
-```
-*Note: Make sure to open the `.env` file and fill in your `DATABASE_URL` (points to your Postgres database) and secure `JWT_SECRET`.*
+# Windows
+copy .env.example .env
 
-**3. Database Setup**
-I created a couple of helpful scripts to push the Prisma schema and populate the database with some initial users.
+# Mac/Linux
+cp .env.example .env
+```
+Ensure you update the `DATABASE_URL` in your `.env` to point to an active PostgreSQL database, and define a random string for your `JWT_SECRET`.
+
+**4. Database Migration & Seeding**
+Sync the Prisma schema to your database and seed it with the necessary administrative accounts:
 ```bash
 npm run db:push
 npm run db:seed
 ```
 
-**4. Start the Application**
+**5. Start the Server**
 ```bash
 npm run dev
 ```
-The server will boot up and be accessible at `http://localhost:3000`.
+The server will start on port `3000`. You can now access the API at `http://localhost:3000`.
 
-## 🧑‍💻 Test Accounts (Seed Data)
-If you ran the seed command above, you can log in immediately using these default accounts to test out exactly how the Role-Based Access Control (RBAC) works:
+## 🧑‍💻 Seed Users (RBAC Testing)
 
-| Role | Email | Password | Permissions |
+To demonstrate the access control logic, the seeding command provisions the following test accounts:
+
+| Role | Login Email | Password | Permissions |
 |--------|----------------|----------------|----------------|
-| **Admin** | `admin@test.com` | `Admin@123` | Full access to records and managing users. |
-| **Analyst** | `analyst@test.com` | `Analyst@123` | Can create & read records, but no user management. |
-| **Viewer** | `viewer@test.com` | `Viewer@123` | Read-only access to records and dashboard. |
+| **Admin** | `admin@test.com` | `Admin@123` | Full access. Can create, edit, soft-delete records, and manage user roles/statuses. |
+| **Analyst** | `analyst@test.com` | `Analyst@123` | Standard access. Can read all records/dashboard stats and create new records. |
+| **Viewer** | `viewer@test.com` | `Viewer@123` | Read-only. Can only view records and dashboard aggregates. |
 
 ## 📚 API Documentation
 
-I've documented all the endpoints, request models, and expected responses in a separate file to keep this README uncluttered and easy to read. 
+For the full detailed overview of available endpoints, request structures, and response payloads:
 
-👉 **[Please check the `API_DOCUMENTATION.md` file here](./API_DOCUMENTATION.md) for full details on how to interact with the API!**
+👉 **[Read the API_DOCUMENTATION.md](./API_DOCUMENTATION.md)**
 
-Alternatively, once you have the app running locally, you can explore the fully interactive **Swagger UI** generated straight from my route definitions by visiting:
-`http://localhost:3000/api/docs`
+**Interactive Swagger UI:**
+Once your server is running, navigate to `http://localhost:3000/api/docs` in your browser to interact directly with the API endpoints!
 
-## 💡 Things I Focused On & Learned
-- **Separation of Concerns:** I kept my routes, controllers, middleware, and database services completely separated. This made understanding the flow of data much easier!
-- **Soft Deletes:** Instead of permanently dropping transaction records from the database, I rely on an `isDeleted` flag so we never accidentally lose historical data.
-- **Rate Limiting:** Added a basic rate limiter using `express-rate-limit` so the login/register endpoints wouldn't get overwhelmed by brute-force attacks.
-
-*Thank you so much for taking the time to review my code. I am really eager to learn and grow, so any feedback on my structural choices, design decisions, or code quality would be highly appreciated!* 🙌
+## 🏗️ Architectural Highlights
+- **Separation of Concerns:** Deep modularity passing data from standard `Routes` ➔ `Controllers` (Handling HTTP logic) ➔ `Services` (Core Business/DB Logic).
+- **Centralized Error Handling:** Global error catching wrapper utilizing custom `ApiError` instances ensures uniform JSON responses even during unexpected Prisma faults.
+- **Audit Logging:** An `AuditLog` table silently tracks core actor mutations across records for complete accountability.
